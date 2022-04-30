@@ -3,6 +3,7 @@ use std::fmt::{self, Debug, Formatter};
 use log::*;
 
 use crate::*;
+use crate::run_dfs::DFSBackoffScheduler;
 
 /** Faciliates running rewrites over an [`EGraph`].
 
@@ -325,7 +326,9 @@ where
             hooks: vec![],
 
             start_time: None,
-            scheduler: Box::new(BackoffScheduler::default()),
+
+            // TODO:  Plug in other RewriteSchedulers here as necessary!
+            scheduler: Box::new(DFSBackoffScheduler::default()),
         }
     }
 
@@ -725,18 +728,18 @@ where
 ///
 #[derive(Debug)]
 pub struct BackoffScheduler {
-    default_match_limit: usize,
-    default_ban_length: usize,
-    stats: IndexMap<Symbol, RuleStats>,
+    pub(crate) default_match_limit: usize,
+    pub(crate) default_ban_length: usize,
+    pub(crate) stats: IndexMap<Symbol, RuleStats>,
 }
 
 #[derive(Debug)]
-struct RuleStats {
-    times_applied: usize,
-    banned_until: usize,
-    times_banned: usize,
-    match_limit: usize,
-    ban_length: usize,
+pub struct RuleStats {
+    pub(crate) times_applied: usize,
+    pub(crate) banned_until: usize,
+    pub(crate) times_banned: usize,
+    pub(crate) match_limit: usize,
+    pub(crate) ban_length: usize,
 }
 
 impl BackoffScheduler {
@@ -754,7 +757,7 @@ impl BackoffScheduler {
         self
     }
 
-    fn rule_stats(&mut self, name: Symbol) -> &mut RuleStats {
+    pub fn rule_stats(&mut self, name: Symbol) -> &mut RuleStats {
         if self.stats.contains_key(&name) {
             &mut self.stats[&name]
         } else {

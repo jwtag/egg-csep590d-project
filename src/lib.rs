@@ -46,6 +46,7 @@ mod multipattern;
 mod pattern;
 mod rewrite;
 mod run;
+mod run_dfs;
 mod subst;
 mod unionfind;
 mod util;
