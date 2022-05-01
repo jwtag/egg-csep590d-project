@@ -6,16 +6,26 @@ use log::*;
 
 use crate::*;
 
-pub struct DFSScheduler<'a, L: Language> {
+// SearchMatches class without "lifetime" mess.
+struct DFSSearchMatches<L: Language> {
+    /// The eclass id that these matches were found in.
+    pub eclass: Id,
+    /// The substitutions for each match.
+    pub substs: Vec<Subst>,
+    /// Optionally, an ast for the matches used in proof production.
+    pub ast: Option<PatternAst<L>>,
+}
+
+pub struct DFSScheduler<L: Language> {
     max_depth: usize,
-    dfs_stack: Vec::<SearchMatches<'a, L>>,
-    visited: Vec<SearchMatches<'a, L>>,
+    dfs_stack: Vec::<DFSSearchMatches<L>>,
+    visited: Vec<DFSSearchMatches<L>>,
     curr_depth: usize,
-    matches: Vec::<SearchMatches<'a, L>>,
+    matches: Vec::<DFSSearchMatches<L>>,
     has_been_initialized: bool
 }
 
-impl<'a, L: Language> DFSScheduler<'a, L>
+impl<L: Language> DFSScheduler<L>
 {
     /// Set the default maximum DFS depth limit after which DFS will stop.
     /// Default: 1,000
@@ -23,10 +33,37 @@ impl<'a, L: Language> DFSScheduler<'a, L>
         self.max_depth = max_depth;
         self
     }
+
+
+    pub fn get_dfssearchmatches(&mut self, sm: Vec<SearchMatches<L>>) -> Vec<DFSSearchMatches<L>> {
+        let mut dfs_sm = vec![];
+        for m in sm {
+            let eclass = m.eclass;
+            let substs = m.substs;
+            let ast = *m.ast.clone();
+            dfs_sm.push(DFSSearchMatches {
+                eclass,
+                substs,
+                ast,
+            })
+        }
+        dfs_sm
+    }
+
+    pub fn dfssearchmatch_to_searchmatch<'a>(dfs_m: &DFSSearchMatches<L>) -> SearchMatches<'a, L> {
+        let eclass = dfs_m.eclass;
+        let substs = dfs_m.substs.clone();
+        let ast = *dfs_m.ast.unwrap().clone();
+        SearchMatches {
+            eclass,
+            substs,
+            ast
+        }
+    }
 }
 
 // Default constructor.
-impl<'a, L: Language> Default for DFSScheduler<'a, L> {
+impl<L: Language> Default for DFSScheduler<L> {
     fn default() -> Self {
         Self {
             max_depth: 1_000,
@@ -40,7 +77,7 @@ impl<'a, L: Language> Default for DFSScheduler<'a, L> {
 }
 
 // The *secret sauce*:  add DFS here!
-impl<L: Language, N: Analysis<L>> RewriteScheduler<L, N> for DFSScheduler<'a, L>
+impl<L: Language, N: Analysis<L>> RewriteScheduler<L, N> for DFSScheduler<L>
     where
         L: Language,
         N: Analysis<L>,
@@ -65,9 +102,10 @@ impl<L: Language, N: Analysis<L>> RewriteScheduler<L, N> for DFSScheduler<'a, L>
         // if we're not at the max_depth, search the egraph + push results to stack
         if self.curr_depth != self.max_depth {
             let mut matches = rewrite.search(egraph);
+            let mut dfs_matches = self.get_dfssearchmatches(matches);
             // add the matches to the front of the stack
-            matches.append(&mut self.dfs_stack);
-            self.dfs_stack = matches;
+            dfs_matches.append(&mut self.dfs_stack);
+            self.dfs_stack = dfs_matches;
             self.curr_depth += 1;
         } else {
             // while the top of the stack was not in visited, pop it
@@ -78,9 +116,10 @@ impl<L: Language, N: Analysis<L>> RewriteScheduler<L, N> for DFSScheduler<'a, L>
         }
 
         // pop and return the 1 match from the top of the stack.
-        let mut top_of_stack: SearchMatches<'a, L> = self.dfs_stack.remove(0);
+        let mut top_of_stack = self.dfs_stack.remove(0);
+        let mut top_of_stack_sm = DFSScheduler::<L>::dfssearchmatch_to_searchmatch(&top_of_stack);
         self.visited.push(top_of_stack);
-        vec![top_of_stack]
+        vec![top_of_stack_sm]
     }
 
     // WE CAN ABUSE THE CURRENT RUNNER!

@@ -328,7 +328,7 @@ where
             start_time: None,
 
             // TODO:  Plug in other RewriteSchedulers here as necessary!
-            scheduler: Box::new(DFSScheduler::<'_, L>::default()),
+            scheduler: Box::new(DFSScheduler::<L>::default()),
         }
     }
 
