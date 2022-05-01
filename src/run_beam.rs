@@ -12,7 +12,7 @@ pub struct BeamScheduler {
 impl Default for BeamScheduler {
     fn default() -> Self {
         Self {
-            beam_width: 5
+            beam_width: 15
         }
     }
 }
@@ -23,7 +23,7 @@ impl<L: Language, N: Analysis<L>> RewriteScheduler<L, N> for BeamScheduler
         L: Language,
         N: Analysis<L>,
 {
-    // TODO MAKE DFS
+    // always can stop.
     fn can_stop(&mut self, iteration: usize) -> bool {
         true
     }
@@ -36,6 +36,11 @@ impl<L: Language, N: Analysis<L>> RewriteScheduler<L, N> for BeamScheduler
         rewrite: &'a Rewrite<L, N>,
     ) -> Vec<SearchMatches<'a, L>> {
         let mut matches: Vec<SearchMatches<'a, L>> = rewrite.search(egraph);
+
+        // scoot the matches with the fewest substitutes to the front
+        matches.sort_by(|a, b| a.substs.len().cmp(&b.substs.len()));
+
+        // get the new size of the array (based upon beam size)
         let vec_len = min(self.beam_width, matches.len());
         unsafe { matches.set_len(vec_len); }
         matches
