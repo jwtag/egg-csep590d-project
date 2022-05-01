@@ -3,7 +3,7 @@ use std::fmt::{self, Debug, Formatter};
 use log::*;
 
 use crate::*;
-use crate::run_dfs::DFSBackoffScheduler;
+use crate::run_dfs::DFSScheduler;
 
 /** Faciliates running rewrites over an [`EGraph`].
 
@@ -328,7 +328,7 @@ where
             start_time: None,
 
             // TODO:  Plug in other RewriteSchedulers here as necessary!
-            scheduler: Box::new(DFSBackoffScheduler::default()),
+            scheduler: Box::new(DFSScheduler::<'_, L>::default()),
         }
     }
 
@@ -381,7 +381,7 @@ where
     /// Change out the [`RewriteScheduler`] used by this [`Runner`].
     /// The default one is [`BackoffScheduler`].
     ///
-    pub fn with_scheduler(self, scheduler: impl RewriteScheduler<L, N> + 'static) -> Self {
+    pub fn with_scheduler( self, scheduler: impl RewriteScheduler<L, N> + 'static) -> Self {
         let scheduler = Box::new(scheduler);
         Self { scheduler, ..self }
     }
@@ -416,7 +416,7 @@ where
         check_rules(&rules);
         self.egraph.rebuild();
         loop {
-            let iter = self.run_one(&rules);
+            let iter = self.run_one(&rules);  // all the magic is in run_one
             self.iterations.push(iter);
             let stop_reason = self.iterations.last().unwrap().stop_reason.clone();
             // we need to check_limits after the iteration is complete to check for iter_limit
@@ -496,6 +496,7 @@ where
         }
     }
 
+    // represents one iteration of the saturation loop
     fn run_one(&mut self, rules: &[&Rewrite<L, N>]) -> Iteration<IterData> {
         assert!(self.stop_reason.is_none());
 
@@ -525,6 +526,7 @@ where
 
         let start_time = Instant::now();
 
+        // do all of the reading for all of the rewrites.  find all of the match substitutions, put them in list
         let mut matches = Vec::new();
         result = result.and_then(|_| {
             rules.iter().try_for_each(|rule| {
@@ -539,6 +541,7 @@ where
 
         let apply_time = Instant::now();
 
+        // do the writing.  add in RHS, merge w/ eclass for RHS
         let mut applied = IndexMap::default();
         result = result.and_then(|_| {
             rules.iter().zip(matches).try_for_each(|(rw, ms)| {
@@ -561,6 +564,7 @@ where
         let apply_time = apply_time.elapsed().as_secs_f64();
         info!("Apply time: {}", apply_time);
 
+        // restore invariant by rebuilding
         let rebuild_time = Instant::now();
         let n_rebuilds = self.egraph.rebuild();
         if self.egraph.are_explanations_enabled() {

@@ -1,147 +1,141 @@
+use std::collections::VecDeque;
 use std::fmt::{self, Debug, Formatter};
+use std::ops::Deref;
 
 use log::*;
 
 use crate::*;
 
-pub struct DFSBackoffScheduler {
-    original_backoff_scheduler: BackoffScheduler
+pub struct DFSScheduler<'a, L: Language> {
+    max_depth: usize,
+    dfs_stack: Vec::<SearchMatches<'a, L>>,
+    visited: Vec<SearchMatches<'a, L>>,
+    curr_depth: usize,
+    matches: Vec::<SearchMatches<'a, L>>,
+    has_been_initialized: bool
 }
 
-// Just call the normal BackoffScheduler methods.
-impl DFSBackoffScheduler {
-    /// Set the initial match limit after which a rule will be banned.
+impl<'a, L: Language> DFSScheduler<'a, L>
+{
+    /// Set the default maximum DFS depth limit after which DFS will stop.
     /// Default: 1,000
-    pub fn with_initial_match_limit(mut self, limit: usize) -> Self {
-        self.original_backoff_scheduler = self.original_backoff_scheduler.with_initial_match_limit(limit);
-        self
-    }
-
-    /// Set the initial ban length.
-    /// Default: 5 iterations
-    pub fn with_ban_length(mut self, ban_length: usize) -> Self {
-        self.original_backoff_scheduler = self.original_backoff_scheduler.with_ban_length(ban_length);
-        self
-    }
-
-    pub fn rule_stats(&mut self, name: Symbol) -> &mut RuleStats {
-        self.original_backoff_scheduler.rule_stats(name)
-    }
-
-    /// Never ban a particular rule.
-    pub fn do_not_ban(mut self, name: impl Into<Symbol>) -> Self {
-        self.original_backoff_scheduler = self.original_backoff_scheduler.do_not_ban(name);
-        self
-    }
-
-    /// Set the initial match limit for a rule.
-    pub fn rule_match_limit(mut self, name: impl Into<Symbol>, limit: usize) -> Self {
-        self.original_backoff_scheduler = self.original_backoff_scheduler.rule_match_limit(name, limit);
-        self
-    }
-
-    /// Set the initial ban length for a rule.
-    pub fn rule_ban_length(mut self, name: impl Into<Symbol>, length: usize) -> Self {
-        self.original_backoff_scheduler = self.original_backoff_scheduler.rule_ban_length(name, length);
+    pub fn with_max_depth(mut self, max_depth: usize) -> Self {
+        self.max_depth = max_depth;
         self
     }
 }
 
 // Default constructor.
-impl Default for DFSBackoffScheduler {
+impl<'a, L: Language> Default for DFSScheduler<'a, L> {
     fn default() -> Self {
         Self {
-            original_backoff_scheduler: BackoffScheduler::default()
+            max_depth: 1_000,
+            dfs_stack: vec![],
+            visited: vec![],
+            curr_depth: 0,
+            matches: vec![],
+            has_been_initialized: false
         }
     }
 }
 
 // The *secret sauce*:  add DFS here!
-impl<L, N> RewriteScheduler<L, N> for DFSBackoffScheduler
+impl<L: Language, N: Analysis<L>> RewriteScheduler<L, N> for DFSScheduler<'a, L>
     where
         L: Language,
         N: Analysis<L>,
 {
     // TODO MAKE DFS
     fn can_stop(&mut self, iteration: usize) -> bool {
-        let n_stats = self.original_backoff_scheduler.stats.len();
-
-        let mut banned: Vec<_> = self.original_backoff_scheduler
-            .stats
-            .iter_mut()
-            .filter(|(_, s)| s.banned_until > iteration)
-            .collect();
-
-        if banned.is_empty() {
-            true
-        } else {
-            let min_ban = banned
-                .iter()
-                .map(|(_, s)| s.banned_until)
-                .min()
-                .expect("banned cannot be empty here");
-
-            assert!(min_ban >= iteration);
-            let delta = min_ban - iteration;
-
-            let mut unbanned = vec![];
-            for (name, s) in &mut banned {
-                s.banned_until -= delta;
-                if s.banned_until == iteration {
-                    unbanned.push(name.as_str());
-                }
-            }
-
-            assert!(!unbanned.is_empty());
-            info!(
-                "Banned {}/{}, fast-forwarded by {} to unban {}",
-                banned.len(),
-                n_stats,
-                delta,
-                unbanned.join(", "),
-            );
-
-            false
-        }
+        self.has_been_initialized && self.dfs_stack.len() == 0
     }
 
-    // TODO MAKE DFS
+    // after each call, the match is applied.
+    // we can take advantage of this to do DFS.  Just return in a DFS pattern, store changes as EGraph is computed.
     fn search_rewrite<'a>(
         &mut self,
         iteration: usize,
         egraph: &EGraph<L, N>,
         rewrite: &'a Rewrite<L, N>,
     ) -> Vec<SearchMatches<'a, L>> {
-        let stats = self.original_backoff_scheduler.rule_stats(rewrite.name);
-
-        if iteration < stats.banned_until {
-            debug!(
-                "Skipping {} ({}-{}), banned until {}...",
-                rewrite.name, stats.times_applied, stats.times_banned, stats.banned_until,
-            );
-            return vec![];
+        // if we have not been initialized, initialize
+        if !self.has_been_initialized {
+            self.has_been_initialized = true;
         }
-
-        let matches = rewrite.search(egraph);
-        let total_len: usize = matches.iter().map(|m| m.substs.len()).sum();
-        let threshold = stats.match_limit << stats.times_banned;
-        if total_len > threshold {
-            let ban_length = stats.ban_length << stats.times_banned;
-            stats.times_banned += 1;
-            stats.banned_until = iteration + ban_length;
-            info!(
-                "Banning {} ({}-{}) for {} iters: {} < {}",
-                rewrite.name,
-                stats.times_applied,
-                stats.times_banned,
-                ban_length,
-                threshold,
-                total_len,
-            );
-            vec![]
+        // if we're not at the max_depth, search the egraph + push results to stack
+        if self.curr_depth != self.max_depth {
+            let mut matches = rewrite.search(egraph);
+            // add the matches to the front of the stack
+            matches.append(&mut self.dfs_stack);
+            self.dfs_stack = matches;
+            self.curr_depth += 1;
         } else {
-            stats.times_applied += 1;
-            matches
+            // while the top of the stack was not in visited, pop it
+            while !self.visited.contains(self.dfs_stack.get(0).unwrap()) {
+                self.dfs_stack.remove(0);
+                self.curr_depth -= 1;
+            }
         }
+
+        // pop and return the 1 match from the top of the stack.
+        let mut top_of_stack: SearchMatches<'a, L> = self.dfs_stack.remove(0);
+        self.visited.push(top_of_stack);
+        vec![top_of_stack]
     }
+
+    // WE CAN ABUSE THE CURRENT RUNNER!
+    //  store private Stack (Vec) of matches, visited, curr_depth, max_depth, has_been_initialized
+    //  each itr:
+    //      if max_depth, pop + increment max depth.
+    //      compute matches, add them to stack.
+    //      increment max depth.
+    //      add top of stack to visited.
+    //      pop & return top of stack.
+    //
+    // make can_stop == "is there anything in the Vec of iGraph yet-to-be-explored" && has_been_initialized
+
+
+    // // TODO MAKE DFS
+    // fn search_rewrite<'a>(
+    //     &mut self,
+    //     iteration: usize,
+    //     mut egraph: EGraph<L, N>,
+    //     rewrite: &'a Rewrite<L, N>,
+    // ) -> Vec<SearchMatches<'a, L>> {
+    //     // if we've reached the max_depth, return an empty vector
+    //     if iteration == self.max_depth {
+    //         vec![]
+    //     } else {
+    //         let mut matches: Vec::<SearchMatches<'a, L>> = vec![];
+    //
+    //         // do DFS over the EClasses
+    //         egraph.classes_mut().for_each(|class| {
+    //             // explore child
+    //             let wrapped_child_matches: Option<SearchMatches<L>> = rewrite.searcher.search_eclass(&egraph, class.id);
+    //             // if we found any child matches, add to all matches and do do DFS
+    //             if wrapped_child_matches.is_some() {
+    //                 // unwrap from Option, make into mutable Vec.
+    //                 let mut child_matches = vec![wrapped_child_matches.unwrap()];
+    //
+    //                 // store the matches
+    //                 matches.append(&mut child_matches);
+    //
+    //                 // apply the matches
+    //                 rewrite.applier.apply_matches(&mut egraph, &*child_matches, rewrite.name);
+    //
+    //                 // further do DFS, get more matches
+    //                 matches.append(&mut self.search_rewrite(iteration + 1, egraph, rewrite));
+    //             }
+    //         });
+    //         // return all matches
+    //         matches
+    //     }
+    // }
+
+    // for class
+    //     get matches
+    //     get more matches (does this require apply?)
+    //     go deeper
+    //
+    // THIS CODE IS PROBABLY ALL GARBAGE
 }
