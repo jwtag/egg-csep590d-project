@@ -47,6 +47,7 @@ mod pattern;
 mod rewrite;
 mod run;
 mod run_dfs;
+mod run_beam;
 mod subst;
 mod unionfind;
 mod util;

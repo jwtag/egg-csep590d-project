@@ -4,6 +4,7 @@ use log::*;
 
 use crate::*;
 use crate::run_dfs::DFSScheduler;
+use crate::run_beam::BeamScheduler;
 
 /** Faciliates running rewrites over an [`EGraph`].
 
@@ -328,7 +329,7 @@ where
             start_time: None,
 
             // TODO:  Plug in other RewriteSchedulers here as necessary!
-            scheduler: Box::new(DFSScheduler::default()),
+            scheduler: Box::new(BeamScheduler::default()),
         }
     }
 

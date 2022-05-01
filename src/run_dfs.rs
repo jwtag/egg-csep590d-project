@@ -25,9 +25,9 @@ impl<L: Language> Eq for DFSSearchMatches<L> {
 }
 
 pub struct DFSScheduler<L: Language> {
-    dfs_stack: Vec::<DFSSearchMatches<L>>,
+    dfs_stack: Vec<DFSSearchMatches<L>>,
     visited: Vec<DFSSearchMatches<L>>,
-    matches: Vec::<DFSSearchMatches<L>>,
+    matches: Vec<DFSSearchMatches<L>>,
     has_been_initialized: bool
 }
 
