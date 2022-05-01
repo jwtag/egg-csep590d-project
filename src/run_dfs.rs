@@ -1,9 +1,6 @@
+#![allow(dead_code)]
+#![allow(unused_variables)]
 use std::borrow::Cow;
-use std::collections::VecDeque;
-use std::fmt::{self, Debug, Formatter};
-use std::ops::Deref;
-
-use log::*;
 
 use crate::*;
 
@@ -51,10 +48,10 @@ impl<L: Language> DFSScheduler<L>
         for m in sm {
             let eclass = m.eclass;
             let substs = m.substs;
-            let mut ast;
+            let ast;
             if m.ast.is_some() {
                 ast = Some(m.ast.unwrap().into_owned().clone());
-            }  else {
+            }  else {  // handle none case for option
                 ast = None;
             }
             dfs_sm.push(DFSSearchMatches {
@@ -71,11 +68,11 @@ impl<L: Language> DFSScheduler<L>
         let substs = dfs_m.substs.clone();
 
         // if the AST is present, get the value.
-        let mut ast;
+        let ast;
         if dfs_m.ast.is_some() {
             let ast_clone = dfs_m.ast.clone();
-            ast = Some(Cow::Owned(ast_clone.unwrap()));
-        } else {
+            ast = Some(Cow::Owned(ast_clone.unwrap()));  // we're extracting from option + wrapping in cow + rewrap in option
+        } else {  // handle none case for option
             ast = None;
         }
 
@@ -126,7 +123,7 @@ impl<L: Language, N: Analysis<L>> RewriteScheduler<L, N> for DFSScheduler<L>
         }
         // if we're not at the max_depth, search the egraph + push results to stack
         if self.curr_depth != self.max_depth {
-            let mut matches = rewrite.search(egraph);
+            let matches = rewrite.search(egraph);
 
             let mut dfs_matches = self.get_dfssearchmatches(matches);
             // add the matches to the front of the stack
@@ -142,8 +139,8 @@ impl<L: Language, N: Analysis<L>> RewriteScheduler<L, N> for DFSScheduler<L>
         }
 
         // pop and return the 1 match from the top of the stack.
-        let mut top_of_stack = self.dfs_stack.remove(0);
-        let mut top_of_stack_sm = DFSScheduler::<L>::dfssearchmatch_to_searchmatch(&top_of_stack);
+        let top_of_stack = self.dfs_stack.remove(0);
+        let top_of_stack_sm = DFSScheduler::<L>::dfssearchmatch_to_searchmatch(&top_of_stack);
         self.visited.push(top_of_stack);
         vec![top_of_stack_sm]
     }
@@ -158,49 +155,4 @@ impl<L: Language, N: Analysis<L>> RewriteScheduler<L, N> for DFSScheduler<L>
     //      pop & return top of stack.
     //
     // make can_stop == "is there anything in the Vec of iGraph yet-to-be-explored" && has_been_initialized
-
-
-    // // TODO MAKE DFS
-    // fn search_rewrite<'a>(
-    //     &mut self,
-    //     iteration: usize,
-    //     mut egraph: EGraph<L, N>,
-    //     rewrite: &'a Rewrite<L, N>,
-    // ) -> Vec<SearchMatches<'a, L>> {
-    //     // if we've reached the max_depth, return an empty vector
-    //     if iteration == self.max_depth {
-    //         vec![]
-    //     } else {
-    //         let mut matches: Vec::<SearchMatches<'a, L>> = vec![];
-    //
-    //         // do DFS over the EClasses
-    //         egraph.classes_mut().for_each(|class| {
-    //             // explore child
-    //             let wrapped_child_matches: Option<SearchMatches<L>> = rewrite.searcher.search_eclass(&egraph, class.id);
-    //             // if we found any child matches, add to all matches and do do DFS
-    //             if wrapped_child_matches.is_some() {
-    //                 // unwrap from Option, make into mutable Vec.
-    //                 let mut child_matches = vec![wrapped_child_matches.unwrap()];
-    //
-    //                 // store the matches
-    //                 matches.append(&mut child_matches);
-    //
-    //                 // apply the matches
-    //                 rewrite.applier.apply_matches(&mut egraph, &*child_matches, rewrite.name);
-    //
-    //                 // further do DFS, get more matches
-    //                 matches.append(&mut self.search_rewrite(iteration + 1, egraph, rewrite));
-    //             }
-    //         });
-    //         // return all matches
-    //         matches
-    //     }
-    // }
-
-    // for class
-    //     get matches
-    //     get more matches (does this require apply?)
-    //     go deeper
-    //
-    // THIS CODE IS PROBABLY ALL GARBAGE
 }
