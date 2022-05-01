@@ -16,7 +16,7 @@ struct DFSSearchMatches<L: Language> {
 
 impl<L: Language> PartialEq<Self> for DFSSearchMatches<L> {
     fn eq(&self, other: &Self) -> bool {
-        other.eclass == self.eclass
+        other.eclass == self.eclass && other.substs == self.substs && other.ast == self.ast
     }
 }
 
@@ -25,24 +25,14 @@ impl<L: Language> Eq for DFSSearchMatches<L> {
 }
 
 pub struct DFSScheduler<L: Language> {
-    max_depth: usize,
     dfs_stack: Vec::<DFSSearchMatches<L>>,
     visited: Vec<DFSSearchMatches<L>>,
-    curr_depth: usize,
     matches: Vec::<DFSSearchMatches<L>>,
     has_been_initialized: bool
 }
 
 impl<L: Language> DFSScheduler<L>
 {
-    /// Set the default maximum DFS depth limit after which DFS will stop.
-    /// Default: 1,000
-    pub fn with_max_depth(mut self, max_depth: usize) -> Self {
-        self.max_depth = max_depth;
-        self
-    }
-
-
     fn get_dfssearchmatches(&mut self, sm: Vec<SearchMatches<L>>) -> Vec<DFSSearchMatches<L>> {
         let mut dfs_sm = vec![];
         for m in sm {
@@ -88,10 +78,8 @@ impl<L: Language> DFSScheduler<L>
 impl<L: Language> Default for DFSScheduler<L> {
     fn default() -> Self {
         Self {
-            max_depth: 1_000,
             dfs_stack: vec![],
             visited: vec![],
-            curr_depth: 0,
             matches: vec![],
             has_been_initialized: false
         }
@@ -121,20 +109,21 @@ impl<L: Language, N: Analysis<L>> RewriteScheduler<L, N> for DFSScheduler<L>
         if !self.has_been_initialized {
             self.has_been_initialized = true;
         }
-        // if we're not at the max_depth, search the egraph + push results to stack
-        if self.curr_depth != self.max_depth {
-            let matches = rewrite.search(egraph);
 
+        // TODO Adjust so that we're returning on the way down instead of using max_depth.
+        //  Add the elements to visited as you go down.
+        let mut matches = rewrite.search(egraph);
+
+        if matches.len() > 0 {
             let mut dfs_matches = self.get_dfssearchmatches(matches);
             // add the matches to the front of the stack
             dfs_matches.append(&mut self.dfs_stack);
             self.dfs_stack = dfs_matches;
-            self.curr_depth += 1;
         } else {
             // while the top of the stack was not in visited, pop it
-            while !self.visited.contains(self.dfs_stack.get(0).unwrap()) {
+            while self.dfs_stack.len() > 0 &&
+                (self.dfs_stack.get(0).is_none() || !self.visited.contains(self.dfs_stack.get(0).unwrap())) {
                 self.dfs_stack.remove(0);
-                self.curr_depth -= 1;
             }
         }
 
