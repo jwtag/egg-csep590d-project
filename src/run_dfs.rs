@@ -14,7 +14,7 @@ struct DFSSearchMatches<L: Language> {
     /// The substitutions for each match.
     pub substs: Vec<Subst>,
     /// Optionally, an ast for the matches used in proof production.
-    pub ast: PatternAst<L>,
+    pub ast: Option<PatternAst<L>>,
 }
 
 impl<L: Language> PartialEq<Self> for DFSSearchMatches<L> {
@@ -51,7 +51,12 @@ impl<L: Language> DFSScheduler<L>
         for m in sm {
             let eclass = m.eclass;
             let substs = m.substs;
-            let ast = m.ast.unwrap().into_owned().clone();
+            let mut ast;
+            if m.ast.is_some() {
+                ast = Some(m.ast.unwrap().into_owned().clone());
+            }  else {
+                ast = None;
+            }
             dfs_sm.push(DFSSearchMatches {
                 eclass,
                 substs,
@@ -64,8 +69,15 @@ impl<L: Language> DFSScheduler<L>
     fn dfssearchmatch_to_searchmatch<'a>(dfs_m: &DFSSearchMatches<L>) -> SearchMatches<'a, L> {
         let eclass = dfs_m.eclass;
         let substs = dfs_m.substs.clone();
-        let ast_clone = dfs_m.ast.clone();
-        let ast = Some(Cow::Owned(ast_clone));
+
+        // if the AST is present, get the value.
+        let mut ast;
+        if dfs_m.ast.is_some() {
+            let ast_clone = dfs_m.ast.clone();
+            ast = Some(Cow::Owned(ast_clone.unwrap()));
+        } else {
+            ast = None;
+        }
 
         SearchMatches {
             eclass,
@@ -115,6 +127,7 @@ impl<L: Language, N: Analysis<L>> RewriteScheduler<L, N> for DFSScheduler<L>
         // if we're not at the max_depth, search the egraph + push results to stack
         if self.curr_depth != self.max_depth {
             let mut matches = rewrite.search(egraph);
+
             let mut dfs_matches = self.get_dfssearchmatches(matches);
             // add the matches to the front of the stack
             dfs_matches.append(&mut self.dfs_stack);
