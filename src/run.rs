@@ -163,7 +163,7 @@ pub struct Runner<L: Language, N: Analysis<L>, IterData = ()> {
 
 impl<L, N> Default for Runner<L, N, ()>
 where
-    L: Language,
+    L: Language + 'static,
     N: Analysis<L> + Default,
 {
     fn default() -> Self {
@@ -308,12 +308,12 @@ type RunnerResult<T> = std::result::Result<T, StopReason>;
 
 impl<L, N, IterData> Runner<L, N, IterData>
 where
-    L: Language,
+    L: Language + 'static,
     N: Analysis<L>,
     IterData: IterationData<L, N>,
 {
     /// Create a new `Runner` with the given analysis and default parameters.
-    pub fn new(analysis: N) -> Self {
+    pub fn new (analysis: N) -> Self {
         Self {
             iter_limit: 30,
             node_limit: 10_000,
@@ -328,7 +328,7 @@ where
             start_time: None,
 
             // TODO:  Plug in other RewriteSchedulers here as necessary!
-            scheduler: Box::new(DFSScheduler::<L>::default()),
+            scheduler: Box::new(DFSScheduler::default()),
         }
     }
 

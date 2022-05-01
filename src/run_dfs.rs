@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::fmt::{self, Debug, Formatter};
 use std::ops::Deref;
@@ -13,7 +14,17 @@ struct DFSSearchMatches<L: Language> {
     /// The substitutions for each match.
     pub substs: Vec<Subst>,
     /// Optionally, an ast for the matches used in proof production.
-    pub ast: Option<PatternAst<L>>,
+    pub ast: PatternAst<L>,
+}
+
+impl<L: Language> PartialEq<Self> for DFSSearchMatches<L> {
+    fn eq(&self, other: &Self) -> bool {
+        other.eclass == self.eclass
+    }
+}
+
+impl<L: Language> Eq for DFSSearchMatches<L> {
+
 }
 
 pub struct DFSScheduler<L: Language> {
@@ -35,12 +46,12 @@ impl<L: Language> DFSScheduler<L>
     }
 
 
-    pub fn get_dfssearchmatches(&mut self, sm: Vec<SearchMatches<L>>) -> Vec<DFSSearchMatches<L>> {
+    fn get_dfssearchmatches(&mut self, sm: Vec<SearchMatches<L>>) -> Vec<DFSSearchMatches<L>> {
         let mut dfs_sm = vec![];
         for m in sm {
             let eclass = m.eclass;
             let substs = m.substs;
-            let ast = *m.ast.clone();
+            let ast = m.ast.unwrap().into_owned().clone();
             dfs_sm.push(DFSSearchMatches {
                 eclass,
                 substs,
@@ -50,10 +61,12 @@ impl<L: Language> DFSScheduler<L>
         dfs_sm
     }
 
-    pub fn dfssearchmatch_to_searchmatch<'a>(dfs_m: &DFSSearchMatches<L>) -> SearchMatches<'a, L> {
+    fn dfssearchmatch_to_searchmatch<'a>(dfs_m: &DFSSearchMatches<L>) -> SearchMatches<'a, L> {
         let eclass = dfs_m.eclass;
         let substs = dfs_m.substs.clone();
-        let ast = *dfs_m.ast.unwrap().clone();
+        let ast_clone = dfs_m.ast.clone();
+        let ast = Some(Cow::Owned(ast_clone));
+
         SearchMatches {
             eclass,
             substs,
