@@ -46,7 +46,6 @@ mod multipattern;
 mod pattern;
 mod rewrite;
 mod run;
-mod run_dfs;
 mod run_beam;
 mod run_bfs_default;
 mod subst;

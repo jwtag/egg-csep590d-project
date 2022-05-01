@@ -3,7 +3,6 @@ use std::fmt::{self, Debug, Formatter};
 use log::*;
 
 use crate::*;
-use crate::run_dfs::DFSScheduler;
 use crate::run_beam::BeamScheduler;
 use crate::run_bfs_default::BFSScheduler;
 
