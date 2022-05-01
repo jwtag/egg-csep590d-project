@@ -138,6 +138,11 @@ impl<L: Language, N: Analysis<L>> RewriteScheduler<L, N> for DFSScheduler<L>
             }
         }
 
+        // if dfs_stack is empty, return empty vector.
+        if self.dfs_stack.len() == 0 {
+            return vec![];
+        }
+
         // pop and return the 1 match from the top of the stack.
         let top_of_stack = self.dfs_stack.remove(0);
         let top_of_stack_sm = DFSScheduler::<L>::dfssearchmatch_to_searchmatch(&top_of_stack);
