@@ -633,25 +633,29 @@ where
         let i = self.iterations.len();
         trace!("EGraph {:?}", self.egraph.dump());
 
-        let start_time = Instant::now();
 
         let mut n_rebuilds = 0;
 
         // do all of the reading for all of the rewrites.  find all of the match substitutions, put them in list
+        let overall_start_time = Instant::now();
+        let mut search_time: f64 = 0 as f64;
+        let mut apply_time: f64 = 0 as f64;
+        let mut rebuild_time: f64 = 0 as f64;
         let mut applied = IndexMap::default();
         result = result.and_then(|_| {
             rules.iter().try_for_each(|rule| {
 
-                // maayyyybe add rule skip (see "applied" if block in apply in normal run_one
-
                 // get rule on RHS
+                let search_start_time = Instant::now();
                 let ms = self.scheduler.search_rewrite(i, &self.egraph, rule);
                 self.check_limits();
+                search_time += search_start_time.elapsed().as_secs_f64();
 
                 let total_matches: usize = ms.iter().map(|m| m.substs.len()).sum();
                 debug!("Applying {} {} times", rule.name, total_matches);
 
                 // apply rule on LHS
+                let apply_start_time = Instant::now();
                 let actually_matched = self.scheduler.apply_rewrite(i, &mut self.egraph, rule, ms);
                 if actually_matched > 0 {
                     if let Some(count) = applied.get_mut(&rule.name) {
@@ -662,34 +666,30 @@ where
                     debug!("Applied {} {} times", rule.name, actually_matched);
                 }
                 self.check_limits();
+                apply_time += apply_start_time.elapsed().as_secs_f64();
 
+                let rebuild_start_time = Instant::now();
                 n_rebuilds += self.egraph.rebuild();
+                rebuild_time += rebuild_start_time.elapsed().as_secs_f64();
 
                 self.check_limits()
             })
         });
 
-        let search_time = start_time.elapsed().as_secs_f64();
         info!("Search time: {}", search_time);
-
-        let apply_time = Instant::now();
-
-        let apply_time = apply_time.elapsed().as_secs_f64();
         info!("Apply time: {}", apply_time);
-
-        // restore invariant by rebuilding
-        let rebuild_time = Instant::now();
-        if self.egraph.are_explanations_enabled() {
-            debug_assert!(self.egraph.check_each_explain(rules));
-        }
-
-        let rebuild_time = rebuild_time.elapsed().as_secs_f64();
         info!("Rebuild time: {}", rebuild_time);
         info!(
             "Size: n={}, e={}",
             self.egraph.total_size(),
             self.egraph.number_of_classes()
         );
+
+
+        // restore invariant by rebuilding
+        if self.egraph.are_explanations_enabled() {
+            debug_assert!(self.egraph.check_each_explain(rules));
+        }
 
         let can_be_saturated = applied.is_empty()
             && self.scheduler.can_stop(i)
@@ -710,7 +710,7 @@ where
             rebuild_time,  // is busted
             n_rebuilds,
             data: IterData::make(self),
-            total_time: start_time.elapsed().as_secs_f64(),
+            total_time: overall_start_time.elapsed().as_secs_f64(),
             stop_reason: result.err(),
         }
     }
