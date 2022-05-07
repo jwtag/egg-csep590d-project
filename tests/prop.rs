@@ -107,7 +107,7 @@ fn prove_something(name: &str, start: &str, rewrites: &[Rewrite], goals: &[&str]
 }
 
 #[test]
-fn prove_contrapositive() {
+fn prop_prove_contrapositive() {
     let _ = env_logger::builder().is_test(true).try_init();
     let rules = &[def_imply(), def_imply_flip(), double_neg_flip(), comm_or()];
     prove_something(
@@ -125,7 +125,7 @@ fn prove_contrapositive() {
 }
 
 #[test]
-fn prove_chain() {
+fn prop_prove_chain() {
     let _ = env_logger::builder().is_test(true).try_init();
     let rules = &[
         // rules needed for contrapositive
@@ -153,7 +153,7 @@ fn prove_chain() {
 }
 
 #[test]
-fn const_fold() {
+fn prop_const_fold() {
     let start = "(| (& false true) (& true false))";
     let start_expr = start.parse().unwrap();
     let end = "false";

@@ -44,7 +44,7 @@ impl DatalogExtTrait for EGraph<Lang, ()> {
 }
 
 #[test]
-fn path() {
+fn datalog_path() {
     let mut egraph = EGraph::<Lang, ()>::default();
     egraph.assert("(edge 1 2), (edge 2 3), (edge 3 4)");
     let rules = vec![
@@ -58,7 +58,7 @@ fn path() {
 }
 
 #[test]
-fn path2() {
+fn datalog_path2() {
     // `pred` function symbol allows us to insert without truth.
     let mut egraph = EGraph::<Lang, ()>::default();
     egraph.assert("(edge 1 2), (edge 2 3), (edge 3 4), (edge 1 4)");

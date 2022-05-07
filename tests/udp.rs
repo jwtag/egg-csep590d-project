@@ -17,7 +17,7 @@ fn prove_eqs(exprs: &[&str], rls: &[Rewrite<USr, UAnalysis>]) {
 }
 
 #[test]
-fn eq_11() {
+fn udp_eq_11() {
     let mut rls = rules();
     rls.push(rewrite!("KEY";"(* ([] (= ?vtk ?vttk)) (* (R ?vtk ?vta) (R ?vttk ?vtta)))"
                             =>
@@ -54,7 +54,7 @@ fn eq_11() {
 }
 
 #[test]
-fn lemma_5_1() {
+fn udp_lemma_5_1() {
     prove_eqs(&vec![
             "(|| (+ (* (var a) (|| (var x))) (var y)))",
             "(|| (+ (* (var a) (var x)) (var y)))",
@@ -62,12 +62,12 @@ fn lemma_5_1() {
 }
 
 #[test]
-fn equality_semantics() {
+fn udp_equality_semantics() {
     prove_eqs(&vec!["(sig t (* (var t) ([] (= (var t) (var e)))))","(var e)"], &rules())
 }
 
 #[test]
-fn spnf() {
+fn udp_spnf() {
     prove_eqs(&vec![
         "(sig t1 (sig t2 (sig t3
             (* ([] (= t2 t)) 

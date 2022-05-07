@@ -274,12 +274,12 @@ egg::test_fn! {math_diff_simple2,   rules(), "(d x (+ 1 (* y x)))" => "y"}
 egg::test_fn! {math_diff_ln,        rules(), "(d x (ln x))" => "(/ 1 x)"}
 
 egg::test_fn! {
-    diff_power_simple, rules(),
+    math_diff_power_simple, rules(),
     "(d x (pow x 3))" => "(* 3 (pow x 2))"
 }
 
 egg::test_fn! {
-    diff_power_harder, rules(),
+    math_diff_power_harder, rules(),
     runner = Runner::default()
         .with_time_limit(std::time::Duration::from_secs(10))
         .with_iter_limit(60)
@@ -293,32 +293,32 @@ egg::test_fn! {
 }
 
 egg::test_fn! {
-    integ_one, rules(), "(i 1 x)" => "x"
+    math_integ_one, rules(), "(i 1 x)" => "x"
 }
 
 egg::test_fn! {
-    integ_sin, rules(), "(i (cos x) x)" => "(sin x)"
+    math_integ_sin, rules(), "(i (cos x) x)" => "(sin x)"
 }
 
 egg::test_fn! {
-    integ_x, rules(), "(i (pow x 1) x)" => "(/ (pow x 2) 2)"
+    math_integ_x, rules(), "(i (pow x 1) x)" => "(/ (pow x 2) 2)"
 }
 
 egg::test_fn! {
-    integ_part1, rules(), "(i (* x (cos x)) x)" => "(+ (* x (sin x)) (cos x))"
+    math_integ_part1, rules(), "(i (* x (cos x)) x)" => "(+ (* x (sin x)) (cos x))"
 }
 
 egg::test_fn! {
-    integ_part2, rules(),
+    math_integ_part2, rules(),
     "(i (* (cos x) x) x)" => "(+ (* x (sin x)) (cos x))"
 }
 
 egg::test_fn! {
-    integ_part3, rules(), "(i (ln x) x)" => "(- (* x (ln x)) x)"
+    math_integ_part3, rules(), "(i (ln x) x)" => "(- (* x (ln x)) x)"
 }
 
 #[test]
-fn assoc_mul_saturates() {
+fn math_assoc_mul_saturates() {
     let expr: RecExpr<Math> = "(* x 1)".parse().unwrap();
 
     let runner: Runner<Math, ConstantFold> = Runner::default()
