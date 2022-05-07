@@ -1,0 +1,8 @@
+Total iterations across all test cases.
+,datalog,lambda,math,prop,simple,udp
+Beam w/ width = 20,6,47,X,10,6,X
+Beam w/ width = 40,6,53,X,10,6,20
+Beam w/ width = 100,6,53,90,10,6,18
+BFS,6,53,90,10,6,16
+BackoffScheduler,6,53,90,10,6,24
+DFS,6,36,71,7,4,16

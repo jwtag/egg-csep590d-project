@@ -413,13 +413,15 @@ where
         L: 'a,
         N: 'a,
     {
+        let mut itr_ct = 0;
         let rules: Vec<&Rewrite<L, N>> = rules.into_iter().collect();
         check_rules(&rules);
         self.egraph.rebuild();
         loop {
-            let iter = self.run_one_dfs(&rules);  // all the magic is in run_one
+            let iter = self.run_one_dfs(&rules);  // This line dictates if BFS or DFS.  Use run_one for BFS and run_one_dfs for DFS.
             self.iterations.push(iter);
             let stop_reason = self.iterations.last().unwrap().stop_reason.clone();
+            itr_ct += 1;
             // we need to check_limits after the iteration is complete to check for iter_limit
             if let Some(stop_reason) = stop_reason.or_else(|| self.check_limits().err()) {
                 info!("Stopping: {:?}", stop_reason);
@@ -430,6 +432,7 @@ where
 
         assert!(!self.iterations.is_empty());
         assert!(self.stop_reason.is_some());
+        println!("ITERATION COUNT : {}", itr_ct);
         self
     }
 

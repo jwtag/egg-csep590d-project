@@ -1,0 +1,8 @@
+Runtimes (ms)
+,datalog,lambda,math,prop,simple,udp
+Beam w/ width = 20,108,165,X,105,106,X
+Beam w/ width = 40,105,176,X,108,106,1118
+Beam w/ width = 100,110,174,314,106,100,2538
+BFS,105,169,316,113,121,2514
+BackoffScheduler,112,169,318,103,103,1630
+DFS,177,198,523,132,120,4403

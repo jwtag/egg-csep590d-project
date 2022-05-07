@@ -12,7 +12,7 @@ pub struct BeamScheduler {
 impl Default for BeamScheduler {
     fn default() -> Self {
         Self {
-            beam_width: 15
+            beam_width: 100
         }
     }
 }
