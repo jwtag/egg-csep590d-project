@@ -51,6 +51,9 @@ mod run_bfs_default;
 mod subst;
 mod unionfind;
 mod util;
+pub mod udp_analysis;
+pub mod udp_lang;
+pub mod udp_rewrites;
 
 /// A key to identify [`EClass`]es within an
 /// [`EGraph`].

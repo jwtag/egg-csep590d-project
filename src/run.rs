@@ -497,7 +497,7 @@ where
         }
     }
 
-    // represents one iteration of the saturation loop
+    // represents one iteration of the saturation loop in a BFS pattern
     fn run_one(&mut self, rules: &[&Rewrite<L, N>]) -> Iteration<IterData> {
         assert!(self.stop_reason.is_none());
 
@@ -605,7 +605,7 @@ where
         }
     }
 
-    // represents one iteration of the saturation loop
+    // represents one iteration of the saturation loop in a DFS pattern
     fn run_one_dfs(&mut self, rules: &[&Rewrite<L, N>]) -> Iteration<IterData> {
         assert!(self.stop_reason.is_none());
 
