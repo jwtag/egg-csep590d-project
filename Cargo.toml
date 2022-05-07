@@ -31,12 +31,7 @@ vectorize = { version = "0.2", optional = true }
 # for the reports feature
 serde_json = { version = "1", optional = true }
 
-[[bench]]
-name = "my_benchmark"
-harness = false
-
 [dev-dependencies]
-criterion = "0.3"
 env_logger = { version = "0.9", default-features = false }
 ordered-float = "2"
 
