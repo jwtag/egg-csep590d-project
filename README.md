@@ -1,67 +1,101 @@
-# <img src="doc/egg.svg" alt="egg logo" height="40" align="left"> egg: egraphs good
+# <img src="doc/egg.svg" alt="egg logo" height="40" align="left"> CSEP590D Project:  EGG with different search algorithms.
 
 [![Crates.io](https://img.shields.io/crates/v/egg.svg)](https://crates.io/crates/egg)
 [![Released Docs.rs](https://img.shields.io/crates/v/egg?color=blue&label=docs)](https://docs.rs/egg/)
 [![Main branch docs](https://img.shields.io/badge/docs-main-blue)](https://egraphs-good.github.io/egg/egg/)
 
-Are you using egg?
-Please cite using the BibTeX below and
- add your project to the `egg`
- [website](https://github.com/egraphs-good/egraphs-good.github.io)!
+This repo contains the code for my CSEP590D project which adjusts EGG to work with different algorithms for exploring the search space.
 
-<details class="bibtex">
-    <summary>BibTeX</summary>
-    <code><pre>@article{2021-egg,
-  author = {Willsey, Max and Nandi, Chandrakana and Wang, Yisu Remy and Flatt, Oliver and Tatlock, Zachary and Panchekha, Pavel},
-  title = {egg: Fast and Extensible Equality Saturation},
-  year = {2021},
-  issue_date = {January 2021},
-  publisher = {Association for Computing Machinery},
-  address = {New York, NY, USA},
-  volume = {5},
-  number = {POPL},
-  url = {https://doi.org/10.1145/3434304},
-  doi = {10.1145/3434304},
-  abstract = {An e-graph efficiently represents a congruence relation over many expressions. Although they were originally developed in the late 1970s for use in automated theorem provers, a more recent technique known as equality saturation repurposes e-graphs to implement state-of-the-art, rewrite-driven compiler optimizations and program synthesizers. However, e-graphs remain unspecialized for this newer use case. Equality saturation workloads exhibit distinct characteristics and often require ad-hoc e-graph extensions to incorporate transformations beyond purely syntactic rewrites.  This work contributes two techniques that make e-graphs fast and extensible, specializing them to equality saturation. A new amortized invariant restoration technique called rebuilding takes advantage of equality saturation's distinct workload, providing asymptotic speedups over current techniques in practice. A general mechanism called e-class analyses integrates domain-specific analyses into the e-graph, reducing the need for ad hoc manipulation.  We implemented these techniques in a new open-source library called egg. Our case studies on three previously published applications of equality saturation highlight how egg's performance and flexibility enable state-of-the-art results across diverse domains.},
-  journal = {Proc. ACM Program. Lang.},
-  month = jan,
-  articleno = {23},
-  numpages = {29},
-  keywords = {equality saturation, e-graphs}
-}
-</pre></code>
-</details>
+These algorithms are:
+- BFS 
+- Optimized BFS through BackoffScheduler - default in parent EGG repo, see this paper for in-depth details:  https://arxiv.org/pdf/2111.13040.pdf
+- Beam Search
+- DFS
 
-Check out the [web demo](https://egraphs-good.github.io/egg-web-demo) for some quick e-graph action!
+###Running different algorithms.
 
-## Using egg
+####Running DFS.
+DFS is implemented via replacing one of the methods in the Runner class.
 
-Add `egg` to your `Cargo.toml` like this:
-```toml
-[dependencies]
-egg = "0.8.0"
+To run DFS, do the following in run.rs:
+- In the "run()" method, set the loop to call `self.run_one_dfs()` instead of `self.run_one()`.
+- In the "new()" method, make the Runner object be constructed with a `BackoffScheduler` in the `scheduler` field.
+
+####Running all non-DFS algorithms.
+All other algorithms in this repo are based upon some form of BFS.  They're implemented via different RewriteScheduler objects.
+
+To run any non-DFS algorithm, do the following in run.rs:
+- In the "run()" method, set the loop to call `self.run_one()` instead of `self.run_one_dfs()`.
+- In the "new()" method, make the Runner object be constructed with the correct scheduler type in the `scheduler` field.  You should choose based upon the following:
+  - BFS = BFSScheduler
+  - BackoffScheduler
+  - Beam Search = BeamScheduler
+
+NOTE:  If you use BeamScheduler, you can adjust the beam width by going into `run_beam.rs` and modifying the `beam_width` variable in the `default()` method.
+
+###Benchmarking with unit tests.
+
+Unit tests are provided in the `tests` directory to test out EGG.
+-	transitive- tests based around evaluating transitive boolean operations.
+-	lambda - tests based around lambda calculus..
+-	math – tests using a language of various mathematical operations.
+-	prop – tests using some propositional language.
+-	simple – tests using a language with commutative addition and multiplication.
+-	udp – tests which evaluate UDP query equivalence using EGG.  Adapted from https://github.com/remysucre/udp/tree/main/src
+
+
+To run a specific test suite, run:
+```
+cargo test <suitename>_ --no-fail-fast
 ```
 
-## Developing
+For example, to run the transitive tests, you'd run:
+```
+cargo test transitive_ --no-fail-fast
+```
 
-It's written in [Rust](https://www.rust-lang.org/).
-Typically, you install Rust using [`rustup`](https://www.rust-lang.org/tools/install).
+The tools used for benchmarking the algorithms can interfere with each other, so you'll want to obtain each metric via its own independent run.
 
-Run `cargo doc --open` to build and open the documentation in a browser.
+NOTE:  Some of these tests will fail for Beam Search at certain beam_widths.  This is expected since Beam Search may not find the optimal algorithm.  This is because Beam Search has lower resource usage at the expense of thoroughness.  The --no-fail-fast flag allows the test to complete execution instead of failing as soon as one runs.
 
-Before committing/pushing, make sure to run `make`, 
- which runs all the tests and lints that CI will (including those under feature flags).
-This requires the [`cbc`](https://projects.coin-or.org/Cbc) solver
- due to the `lp` feature.
+NOTE2:  To get test-specific (not suite-level) metrics for any of the below benchmarks, substitute the test name for the `<suitename>_` text in any of the below commands.
 
-### Tests
+####Getting the runtimes of the algorithms in ms.
 
-Running `cargo test` will run the tests.
-Some tests may time out; try `cargo test --release` if that happens.
+Rust's built-in testing lib does not provide ms-level metrics for test runtimes.  This means that the execution times of some of these tests are reported as 0.0s since some of the tests are so fast.
 
-There are a couple interesting tests in the `tests` directory:
+To complete ms-level measurements, we can modify the built-in Unix `time` command to report ms-level metrics and use that instead.  To do this, first set the following variable in your enviroment:
+```
+TIMEFMT=$'\n================\nCPU\t%P\nuser\t%mU\nsystem\t%mS\ntotal\t%mE'
+```
 
-- `prop.rs` implements propositional logic and proves some simple
-  theorems.
-- `math.rs` implements real arithmetic, with a little bit of symbolic differentiation.
-- `lambda.rs` implements a small lambda calculus, using `egg` as a partial evaluator.
+Then, run the following command:
+```
+time cargo test --no-fail-fast <suitename>_
+```
+
+The results will contain the runtime in ms.
+
+NOTE:  The `time` command will pull-in the time spent for Rust to setup and run the test suite.  This is consistent across all algorithms though, so it does not impact our ability to use these metrics for runtime comparisons.
+
+####Getting the peak memory usage of the algorithms in ms.
+
+Included in this repo is a script called `memusg.sh`.  This script can be used to get the peak memory usage of EGG during the test execution.
+
+To run the script, execute the following command:
+```
+./memusg.sh cargo test --no-fail-fast <suitename>_
+```
+
+The results will contain the peak memory usage in KB.
+
+NOTE:  This script was adapted from https://gist.github.com/netj/526585
+
+####Getting the number of search algorithm executions requried to achieve equality saturation.
+
+To get the number of search algorithm executions required to achieve equality saturation, run the following command:
+```
+cargo test --no-fail-fast <suitename>_ -- --nocapture | grep "REBUILD COUNT" | grep -Eo '[0-9]' | awk '{ sum += $1; } END { print sum; }' "$@"
+```
+
+The number output at the end of the command is the aggregate number of search algorithm executions required to achieve equality saturation.
