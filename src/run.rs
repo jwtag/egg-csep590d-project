@@ -708,9 +708,9 @@ where
             egraph_nodes,
             egraph_classes,
             hook_time,
-            search_time,  // is busted
-            apply_time,  // is busted
-            rebuild_time,  // is busted
+            search_time,
+            apply_time,
+            rebuild_time,
             n_rebuilds,
             data: IterData::make(self),
             total_time: overall_start_time.elapsed().as_secs_f64(),

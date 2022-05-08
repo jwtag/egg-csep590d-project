@@ -1,5 +1,7 @@
 use egg::*;
 
+// NOTE:  This class was originally called "datalog" in the main EGG repo, but I've renamed it to
+// "transitive" since the class is really testing transitivity and not the Datalog language.
 define_language! {
     enum Lang {
         "true" = True,
@@ -8,13 +10,13 @@ define_language! {
     }
 }
 
-trait DatalogExtTrait {
+trait TransitiveExtTrait {
     fn assert(&mut self, s: &str);
     fn check(&mut self, s: &str);
     fn check_not(&mut self, s: &str);
 }
 
-impl DatalogExtTrait for EGraph<Lang, ()> {
+impl TransitiveExtTrait for EGraph<Lang, ()> {
     fn assert(&mut self, s: &str) {
         let true_id = self.add(Lang::True);
         for e in s.split(',') {
@@ -44,7 +46,7 @@ impl DatalogExtTrait for EGraph<Lang, ()> {
 }
 
 #[test]
-fn datalog_path() {
+fn transitive_path() {
     let mut egraph = EGraph::<Lang, ()>::default();
     egraph.assert("(edge 1 2), (edge 2 3), (edge 3 4)");
     let rules = vec![
@@ -58,7 +60,7 @@ fn datalog_path() {
 }
 
 #[test]
-fn datalog_path2() {
+fn transitive_path2() {
     // `pred` function symbol allows us to insert without truth.
     let mut egraph = EGraph::<Lang, ()>::default();
     egraph.assert("(edge 1 2), (edge 2 3), (edge 3 4), (edge 1 4)");
