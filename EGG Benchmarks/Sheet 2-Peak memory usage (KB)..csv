@@ -1,5 +1,5 @@
 Peak memory usage (KB).
-,datalog,lambda,math,prop,simple,udp
+,transitive,lambda,math,prop,simple,udp
 Beam w/ width = 20,7072,24848,X,7280,7136,X
 Beam w/ width = 40,6272,24768,X,6990,6992,88800
 Beam w/ width = 100,6992,25008,28400,7088,6960,95264
