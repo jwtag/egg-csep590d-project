@@ -95,7 +95,7 @@ NOTE:  This script was adapted from https://gist.github.com/netj/526585
 
 To get the number of search algorithm executions required to achieve equality saturation, run the following command:
 ```
-cargo test --no-fail-fast <suitename>_ -- --nocapture | grep "REBUILD COUNT" | grep -Eo '[0-9]' | awk '{ sum += $1; } END { print sum; }' "$@"
+cargo test --no-fail-fast <suitename>_ -- --nocapture | grep "ITERATION COUNT" | grep -Eo '[0-9]' | awk '{ sum += $1; } END { print sum; }' "$@"
 ```
 
 The number output at the end of the command is the aggregate number of search algorithm executions required to achieve equality saturation.
